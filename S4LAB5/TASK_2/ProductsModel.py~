@@ -1,0 +1,50 @@
+from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
+
+
+class Product:
+    def __init__(self, name, quantity, unit_weight):
+        self.name = name
+        self.quantity = quantity
+        self.unit_weight = unit_weight
+        self.total_weight = quantity * unit_weight
+
+
+class ProductsModel(QAbstractTableModel):
+    def __init__(self):
+        super().__init__()
+        self.products = []
+        self._total_weight = 0.0
+
+    @property
+    def total_weight(self):
+        return self._total_weight
+
+    def update_total(self):
+        self._total_weight = sum(p.total_weight for p in self.products)
+        self.dataChanged.emit(QModelIndex(), QModelIndex())
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self.products)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 4  # Название, Количество, Вес единицы, Общий вес
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
+            product = self.products[index.row()]
+            return [
+                product.name,
+                product.quantity,
+                f"{product.unit_weight:.2f}",
+                f"{product.total_weight:.2f}"
+            ][index.column()]
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+            return ["Название", "Количество", "Вес единицы (кг)", "Общий вес (кг)"][section]
+
+    def add_product(self, name, quantity, unit_weight):
+        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+        self.products.append(Product(name, quantity, unit_weight))
+        self.endInsertRows()
+        self.update_total()

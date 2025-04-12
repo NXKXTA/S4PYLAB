@@ -1,0 +1,8 @@
+from PyQt6.QtWidgets import QApplication
+from NoteWindow import NoteWindow
+import sys
+
+app = QApplication(sys.argv)
+window = NoteWindow()
+window.show()
+sys.exit(app.exec())

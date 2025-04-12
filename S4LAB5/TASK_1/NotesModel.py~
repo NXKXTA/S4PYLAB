@@ -1,0 +1,26 @@
+# Модель
+from PyQt6.QtCore import Qt, QModelIndex, QAbstractListModel
+
+
+class NotesModel(QAbstractListModel):
+    def __init__(self):
+        super().__init__()
+        self.notes = []
+
+    def data(self, index, role):
+        if role == Qt.ItemDataRole.DisplayRole:
+            return self.notes[index.row()]
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self.notes)
+
+    def add_note(self, text):
+        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+        self.notes.append(text)
+        self.endInsertRows()
+
+    def delete_note(self, index):
+        row = index.row()
+        self.beginRemoveRows(QModelIndex(), row, row)
+        del self.notes[row]
+        self.endRemoveRows()

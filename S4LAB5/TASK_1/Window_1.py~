@@ -1,0 +1,44 @@
+# Вид
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QLineEdit,
+    QPushButton, QListView, QMessageBox
+)
+from NotesModel import NotesModel
+
+
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Заметки")
+        self.setGeometry(100, 100, 400, 300)
+
+        # Создаем модель
+        self.model = NotesModel()
+
+        # Создаем элементы интерфейса
+        self.note_input = QLineEdit()
+        self.add_button = QPushButton("Добавить заметку")
+        self.notes_list = QListView()
+        self.notes_list.setModel(self.model)
+
+        # Настройка layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.note_input)
+        layout.addWidget(self.add_button)
+        layout.addWidget(self.notes_list)
+        self.setLayout(layout)
+
+        # Подключаем сигналы
+        self.add_button.clicked.connect(self.add_note)
+        self.notes_list.clicked.connect(self.delete_note)
+
+    def add_note(self):
+        text = self.note_input.text().strip()
+        if text:
+            self.model.add_note(text)
+            self.note_input.clear()
+        else:
+            QMessageBox.warning(self, "Ошибка", "Заметка не может быть пустой!")
+
+    def delete_note(self, index):
+        self.model.delete_note(index)
