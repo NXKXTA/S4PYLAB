@@ -41,13 +41,17 @@ class MainWindow(QMainWindow):
             self.model.appendRow(row)
         # -----------------------------------------------------------------------------------------
 
+        # Добавляем прокси-модель для фильтрации
+        self.proxy_model = BMIFilterProxyModel()
+        self.proxy_model.setSourceModel(self.model)
+
         # Добавляем строки с данными о людях в таблицу
         # -----------------------------------------------------------------------------------------
         self.table_view = QTableView()
         font = self.table_view.font()
         font.setPointSize(10)  # Задаём размер шрифта
-        self.table_view.setFont(font) # Установка заданного шрифта
-        self.table_view.setModel(self.model) # Связка модели данных и таблицы(вид)
+        self.table_view.setFont(font)
+        self.table_view.setModel(self.proxy_model)  # Устанавливаем ПРОКСИ-модель
         self.table_view.resizeColumnsToContents()  # Автоматически подгоняет ширину под содержимое
         # ------------------------------------------------------------------------------------------
 
@@ -102,13 +106,6 @@ class MainWindow(QMainWindow):
         self.setMenuBar(menubar)  # Устанавливаем меню в главное окно
         # -----------------------------------------------------------------------------------
 
-        # ----------------------------------------------------------------------------------------
-        # Добавляем прокси-модель для фильтрации
-        self.proxy_model = BMIFilterProxyModel()
-        self.proxy_model.setSourceModel(self.model)
-        self.table_view.setModel(self.proxy_model)
-        # -------------------------------------------------------------------------------------------
-
     def open_filter_dialog(self):
         dialog = FilterDialog(self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -124,37 +121,70 @@ class MainWindow(QMainWindow):
     # Отдельный виджет состояния
     # -------------------------------------------------------------------------------------------------------------
     def update_status_widget(self):
-        selected = self.table_view.selectionModel().selectedRows()
+        selected_proxy_indexes = self.table_view.selectionModel().selectedRows()
 
-        if len(selected) != 1:
+        if len(selected_proxy_indexes) != 1:
             self.status_widget.setText("Выберите одну запись для отображения состояния")
             self.status_widget.setStyleSheet("""
-                    QLabel {
-                        font-size: 14px;
-                        font-weight: bold;
-                        border: 2px solid #cccccc;
-                        border-radius: 5px;
-                        padding: 10px;
-                    }
-                """)
+                QLabel {
+                    font-size: 14px;
+                    font-weight: bold;
+                    border: 2px solid #cccccc;
+                    border-radius: 5px;
+                    padding: 10px;
+                }
+            """)
             return
 
-        row = selected[0].row()
-        status = self.model.item(row, 5).text()
-        color = self.model.item(row, 5).background().color().name()
+        try:
+            # Преобразование индекса из прокси-модели
+            proxy_index = selected_proxy_indexes[0]
+            source_index = self.proxy_model.mapToSource(proxy_index)
 
-        self.status_widget.setText(f"Состояние: {status}")
-        self.status_widget.setStyleSheet(f"""
-                    QLabel {{
-                        background: {color};
-                        color: {'white' if QColor(color).lightness() < 128 else 'black'};
-                        font-size: 14px;
-                        font-weight: bold;
-                        border: 2px solid #cccccc;
-                        border-radius: 5px;
-                        padding: 10px;
-                    }}
-                """)
+            # Проверка валидности индекса
+            if not source_index.isValid():
+                raise ValueError("Некорректный индекс строки")
+
+            row = source_index.row()
+
+            # Проверка существования элемента в модели
+            if row >= self.model.rowCount():
+                raise IndexError("Строка за пределами диапазона модели")
+
+            status_item = self.model.item(row, 5)
+            if not status_item:
+                raise ValueError("Элемент состояния не найден")
+
+            # Получение данных
+            status = status_item.text()
+            color = status_item.background().color().name()
+
+            # Обновление виджета
+            self.status_widget.setText(f"Состояние: {status}")
+            self.status_widget.setStyleSheet(f"""
+                QLabel {{
+                    background: {color};
+                    color: {'white' if QColor(color).lightness() < 128 else 'black'};
+                    font-size: 14px;
+                    font-weight: bold;
+                    border: 2px solid #cccccc;
+                    border-radius: 5px;
+                    padding: 10px;
+                }}
+            """)
+
+        except Exception as e:
+            print(f"Ошибка обновления статуса: {str(e)}")
+            self.status_widget.setText("Ошибка отображения состояния")
+            self.status_widget.setStyleSheet("""
+                QLabel {
+                    background: #ffcccc;
+                    color: black;
+                    border: 2px solid #ff0000;
+                    border-radius: 5px;
+                    padding: 10px;
+                }
+            """)
     # -------------------------------------------------------------------------------------------------------------
 
     # Окно изменения человека
